@@ -27,7 +27,6 @@ class BooksDatabase(context: Context?) :
     fun insertData(book: Book) {
         Log.d("INFO", "Insert data in database")
         val db = writableDatabase
-        db.beginTransaction()
         val values = ContentValues()
         val bos = ByteArrayOutputStream()
         book.icon?.compress(Bitmap.CompressFormat.PNG, 100, bos)
@@ -35,6 +34,7 @@ class BooksDatabase(context: Context?) :
         values.put(TITLE, book.title)
         values.put(DESCRIPTION, book.description)
         values.put(FAVORITE, book.favorite)
+        db.beginTransaction()
         db.insertOrThrow(DATABASE_TABLE_NAME, null, values)
         db.setTransactionSuccessful()
         db.endTransaction()

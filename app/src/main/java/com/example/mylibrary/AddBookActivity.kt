@@ -55,7 +55,7 @@ class AddBookActivity : AppCompatActivity() {
                 .setAction("Action", null).show()
             findViewById<ProgressBar>(R.id.progressBar).visibility = View.VISIBLE
             findViewById<ListView>(R.id.add_book_list).adapter = null
-            val strUrl = "https://www.googleapis.com/books/v1/volumes?q=${searchEditText.text}&key=AIzaSyCCxOOWnzxZ7Y_K22Und4OSJfWxB4IXWqA&maxResults=40"
+            val strUrl = "https://www.googleapis.com/books/v1/volumes?q=${searchEditText.text}&key=AIzaSyCCxOOWnzxZ7Y_K22Und4OSJfWxB4IXWqA&maxResults=10"
             fetchBooks(strUrl)
             false
         }
@@ -64,7 +64,7 @@ class AddBookActivity : AppCompatActivity() {
         if (extraStr != null) {
             searchEditText.setText(extraStr)
             findViewById<ProgressBar>(R.id.progressBar).visibility = View.VISIBLE
-            val strUrl = "https://www.googleapis.com/books/v1/volumes?q=${searchEditText.text}&key=AIzaSyCCxOOWnzxZ7Y_K22Und4OSJfWxB4IXWqA&maxResults=40"
+            val strUrl = "https://www.googleapis.com/books/v1/volumes?q=${searchEditText.text}&key=AIzaSyCCxOOWnzxZ7Y_K22Und4OSJfWxB4IXWqA&maxResults=10"
             fetchBooks(strUrl)
         }
 
@@ -104,7 +104,8 @@ class AddBookActivity : AppCompatActivity() {
 
     private fun fetchBooks(str_url: String, add: Boolean = false, start_index: Int = 0) {
         val strUrlIndexed = "$str_url&startIndex=$start_index"
-        Log.d("INFO", "Request url : $str_url")
+        Log.d("INFO", "Request url : $strUrlIndexed")
+        var notAll = false
         lifecycleScope.launch(Dispatchers.IO) {
             val result = getRequest(strUrlIndexed)
             if (result != null) {
@@ -153,22 +154,30 @@ class AddBookActivity : AppCompatActivity() {
 
                     withContext(Dispatchers.Main) {
                         val addBookList = findViewById<ListView>(R.id.add_book_list)
-                        val bookAdapter = createAdapter()
-                        if (add && addBookList.adapter != null) {
-                            val bookAdapter : BookAdapter = addBookList.adapter as BookAdapter
+                        var bookAdapter = createAdapter()
+                        if (add) {
+                            if (addBookList.adapter != null) {
+                                bookAdapter = addBookList.adapter as BookAdapter
+                            }
+                            else {
+                                Log.d("INFO", "Error Adapter should not be null")
+                            }
                         }
                         Log.d("INFO", "Showing results")
                         bookList.forEach {
                             bookAdapter.add(it)
                         }
-                        addBookList.adapter = bookAdapter
+                        if (!add) {
+                            addBookList.adapter = bookAdapter
+                        }
                         bookAdapter.notifyDataSetChanged()
 //                        findViewById<ProgressBar>(R.id.progressBar).visibility = View.INVISIBLE
                     }
 
-                    if (json.has("totalItems") && json.getInt("totalItems") > 40)
+                    if (json.has("totalItems") && json.getInt("totalItems") - start_index > 10)
                     {
-                        fetchBooks(str_url, true, start_index + 40)
+                        notAll = true
+                        fetchBooks(str_url, true, start_index + 10)
                     }
                 }
                 catch (err: Error) {
@@ -178,8 +187,11 @@ class AddBookActivity : AppCompatActivity() {
             else {
                 Log.d("INFO", "Error : Get request returned no response")
             }
-            withContext(Dispatchers.Main) {
-                findViewById<ProgressBar>(R.id.progressBar).visibility = View.INVISIBLE
+            if (!notAll) {
+                withContext(Dispatchers.Main) {
+                    Log.d("INFO", "Stop progress bar")
+                    findViewById<ProgressBar>(R.id.progressBar).visibility = View.INVISIBLE
+                }
             }
         }
     }
